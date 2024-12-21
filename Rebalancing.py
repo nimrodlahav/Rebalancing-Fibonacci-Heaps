@@ -156,6 +156,38 @@ class AVLTree(object):
     @pre: node is a real pointer to a node in self
     """
     def delete(self, node):
+        deleted_node = search(self, node.key)[0]
+        if deleted_node.height == 0:                                # case 1: it's a leaf
+            if node.key < deleted_node.parent.key:                 
+                deleted_node.parent.left = None
+            else:                                                   # it's a right child
+                deleted_node.parent.right = None
+                                                                    # case 2: deleted node has one son
+        elif deleted.node.left = None:                              # the deleted node has one child on it's right
+            if node.key < deleted_node.parent.key:                  # deleted node is a left child
+                deleted_node.parent.left = deleted_node.right
+            else:                                                   # deleted node is a right child
+                deleted_node.parent.right = deleted_node.right
+            deleted_node.right = deleted_node.parent
+                
+        elif:                                                       # the deleted node has one child on it's left
+            if node.key < deleted_node.parent.key:                  # if it's a left child
+                deleted_node.parent.left = deleted_node.left
+            else:                                                   # if the deleted node is a right child
+                deleted_node.parent.right = deleted_node.left
+            deleted_node.left.parent = deleted_node.parent
+        else:                                                       # case 3: deleted node has 2 sons
+            succ = successor(self,deleted_node)
+            succ.parent.left = succ.right
+            succ.right.parent = succ.parent                         # cut successor out of the tree
+            succ.parent = deleted_node.parent                       # put it instead of deleted node
+            if deleted_node.key < deleted_node.parent.key:          
+                deleted_node.parent.left = succ
+            else:
+                deleted_node.parent.right = succ
+                                                          # treat: what is the minimal amount of changes needed for deletion?
+        rebalancePostDeletion(self, succ.parent)
+        
         return	
 
     """joins self with item and another AVLTree
@@ -169,6 +201,23 @@ class AVLTree(object):
     @pre: all keys in self are smaller than key and all keys in tree2 are larger than key,
     or the opposite way
     """
+
+    def successor(self, node):
+        temp = self.root
+        prev = None
+        if (temp.right is not None):
+            temp  = temp.right
+            while (temp.left is not None):
+                temp = temp.left
+            prev = temp
+        elif temp.left is not None:e
+            temp = temp.left
+            while (temp.right is not None):
+                temp = temp.right
+            prev = temp
+        else:
+            return None
+        return prev.key
 
     def rebalancePostInsertion(self, p):
         while p != None:
