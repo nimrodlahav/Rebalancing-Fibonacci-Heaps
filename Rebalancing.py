@@ -104,44 +104,21 @@ class AVLTree(object):
     and h is the number of PROMOTE cases during the AVL rebalancing
     """
     def insert(self, key, val):
-    new_node = AVLNode(key,val)
-    depth = search(key)[1]
-    parent = search(key)[0].parent     
-    new_node.parent = parent            # insertion
-    new_node.height = 0                 # adjust new node's height
+        depth = search(key)[1]
+        promotions = 0
+        new_node = AVLNode(key, val)
+        parent = search(key)[0].parent          
+        new_node.parent = parent                 # insertion
+        setHeight(self, new_node)                
+        
+        if key < parent.key:                     
+            parent.left = new_node
+        else:
+            parent.right = new_node
+            
+        rebalancePostInsertion(self, parent)
 
-    while parent != null:
-        prev_height = parent.height
-        parent.height = 1 + max(parent.left.height, parent.right.height)
-
-        BF_parent = new_node.parent.left.height - new_node.parent.right.height
-        if abs(BF_parent)<2 and prev_height == parent.height:
-            return                                                  # balanced
-        elif abs(BF_parent)<2 and prev_height != parent.height:
-            parent = parent.parent
-            continue
-        elif abs(BF_parent) == 2:       # rotation required
-            if BF_parent == 2:
-                if parent.left.height-parent.right.height == 1:     # right rotation
-                    parent.right = parent.parent
-                    parent.parent.left = parent.right
-
-                    parent.parent = 
-                    
-                
-                    parent.parent = pointer1
-                    parent.right = pointer2
-                    pointer
-                    
-                    
-                else:           # left then right rotation
-
-            else:   # BF_parent=-2
-                if parent.left.height-parent.right.height == -1     # left rotation
-                    parent.right.left = parent
-                else:       # right then left rotation            
-                    parent.right.left, parent
-        return None, -1, -1
+        return new_node, depth, promotions
 
     """inserts a new node into the dictionary with corresponding key and value, starting at the max
 
@@ -156,7 +133,22 @@ class AVLTree(object):
     and h is the number of PROMOTE cases during the AVL rebalancing
     """
     def finger_insert(self, key, val):
-        return None, -1, -1
+        depth = finger_search(key)[1]
+        promotions = 0
+        new_node = AVLNode(key, val)
+        finger_search(self, key)[0] = new_node          # insertion
+        parent = finger_search(key)[0].parent
+        new_node.parent = parent
+        setHeight(self, new_node)
+
+        if key < parent.key:                     
+            parent.left = new_node
+        else:
+            parent.right = new_node
+            
+        rebalancePostInsertion(self, parent)
+
+        return new_node, depth, promotions
 
     """deletes node from the dictionary
 
@@ -185,6 +177,7 @@ class AVLTree(object):
                 break
             elif abs(p.getBF()) < 2 and prevHeight != p.setHeight():  # Promotion case: P's height has changed
                 p = p.parent
+                promotions += 1
             else:  # Terminal case: Rotation
                 if p.getBF() == 2:
                     if p.left.getBF() == 1:  # Single Right Rotation
