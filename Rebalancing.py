@@ -1,15 +1,16 @@
-#id1: 205541170
-#name1: nimrod lahav
-#username1: nimrodlahav
-#id2:
-#name2:
-#username2:
+#id1:
+#name1: Nimrod Lahav
+#username1:
+#id2: 212780829
+#name2: Shira Shnizik
+#username2: Shirashnizik
 
-"""A class representing a node in an AVL tree"""
+
+"""A class represnting a node in an AVL tree"""
 
 class AVLNode(object):
-    """Constructor, you are allowed to add more fields. 
-    
+    """Constructor, you are allowed to add more fields.
+
     @type key: int
     @param key: key of your node
     @type value: string
@@ -23,29 +24,63 @@ class AVLNode(object):
         self.parent = None
         self.height = -1
 
-    """returns whether self is not a virtual node 
-
-    @rtype: bool
-    @returns: False if self is a virtual node, True otherwise.
-    """
     def is_real_node(self):
-        return False
+        return self is not None
 
+    # Helper method for calculating node's children height
+    def children_height(self):
+        left = self.left.height if self.left else -1
+        right = self.right.height if self.right else -1
+        return left, right
+
+    # Node's height setter
+    def set_height(self):
+        left_height, right_height = self.children_height()
+        self.height = max(left_height, right_height) + 1
+
+    # Helper method for calculating node's Balance Factor
+    def get_bf(self):
+        left_height, right_height = self.children_height()
+        return left_height - right_height
 
 """
 A class implementing an AVL tree.
 """
 
 class AVLTree(object):
-
     """
     Constructor, you are allowed to add more fields.
     """
-    def __init__(self):
-        self.root = None
+
+    def __init__(self, root=None):
+       self.root = root
+
+    # Helper method that returns the triplet (key, path, parent)
+    def search_helper(self, key, finger=False):
+        if not finger:
+            path = 1  # Initialize path
+            curr = self.get_root()
+            parent = None
+        else: # Finger search
+            path = 0  # Initialize path
+            curr = self.max_node()
+            while curr is not self.get_root() and curr.parent.key > key:
+                curr = curr.parent
+                path += 1
+        while curr is not None and curr.key != key:
+            parent = curr
+            if curr.key > key:
+                curr = curr.left
+            else: # The desired node is located in the right subtree
+                curr = curr.right
+            path += 1
+        if curr is not None:
+            return curr, path, parent
+        else: # AVL tree does not contain a node with the key k
+            return curr, -1, parent
 
     """searches for a node in the dictionary corresponding to the key (starting at the root)
-    
+
     @type key: int
     @param key: a key to be searched
     @rtype: (AVLNode, int)
@@ -53,43 +88,107 @@ class AVLTree(object):
     and e is the number of edges on the path between the starting node and ending node+1.
     """
     def search(self, key):
-        curr = self.root
-        path = 1 # Initialize path
-        while curr != None and curr.key != key:
-            if curr.key > key:
-                curr = curr.left
-            else: # The desired node is located in the left subtree
-                curr = curr.right
-            path += 1
-        if curr != None:
-            return curr, path
-        else: # AVL tree does not contain a node with the key k
-            return curr, -1
+        desired_node = self.search_helper(key)[0]
+        path = self.search_helper(key)[1]
+        return desired_node, path
 
     """searches for a node in the dictionary corresponding to the key, starting at the max
-    
+
     @type key: int
     @param key: a key to be searched
-    @rtype: (AVLNode, int)
-    @returns: a tuple (x, e) where x is the node corresponding to key (or None if not found),
+    @rtype: (AVLNode,int)
+    @returns: a tuple (x,e) where x is the node corresponding to key (or None if not found),
     and e is the number of edges on the path between the starting node and ending node+1.
     """
     def finger_search(self, key):
-        curr = self.max_node()
-        path = 1 # Initialize path
-        while curr != self.root and curr.parent.key > key:
-            curr = curr.parent
-            path += 1
-        while curr != None and curr.key != key:
-            if curr.key > key:
-                curr = curr.left
-            else: # The desired node is located in the left subtree
-                curr = curr.right
-            path += 1
-        if curr != None:
-            return curr, path
-        else: # AVL tree does not contain a node with the key k
-            return curr, -1
+        desired_node = self.search_helper(key)[0]
+        path = self.search_helper(key, True)[1]
+        return desired_node, path
+
+    # Helper method for rebalancing an AVL tree after insertion
+    def rebalance_post_insertion(self, p):
+        promotions = 0
+        while p is not None:
+            prev_height = p.height
+            p.set_height()
+            if abs(p.get_bf()) < 2 and prev_height == p.height: # Terminal case: Height has not changed
+                break
+            elif abs(p.get_bf()) < 2 and prev_height != p.height: # Promotion case: P's height has changed
+                p = p.parent
+                promotions += 1
+            else: # Terminal case: Rotation (|BF(p)|=2)
+                if p.get_bf() == 2:
+                    if p.left.get_bf() == 1: # Single Right Rotation
+                        self.right_rotation(p.left)
+                    elif p.left.get_bf() == -1: # Left then right rotation
+                        self.left_rotation(p.left.right)
+                        self.right_rotation(p.left)
+                elif p.get_bf() == -2:
+                    if p.right.get_bf() == 1: # Right then left rotation
+                        self.right_rotation(p.right.left)
+                        self.left_rotation(p.right)
+                    elif p.right.get_bf() == -1: # Single left rotation
+                        self.left_rotation(p.right)
+                break
+        return promotions
+
+    # Helper method for rebalancing an AVL tree after deletion
+    def rebalance_post_deletion(self, p):
+        while p is not None:
+            prev_height = p.height
+            p.set_height()
+            if abs(p.get_bf()) < 2 and prev_height == p.height: # Terminal case: Height has not changed
+                break
+            elif abs(p.get_bf()) < 2 and prev_height != p.height: # Promotion case: P's height has changed
+                p = p.parent
+            else: # Terminal\Promotion case: Rotation (|BF(p)|=2)
+                if p.get_bf() == 2:
+                    if p.left.get_bf() in [1, 0]: # Single Right Rotation
+                        self.right_rotation(p.left)
+                    elif p.left.get_bf() == -1: # Left then right rotation
+                        self.left_rotation(p.left.right)
+                        self.right_rotation(p.left)
+                else:
+                    if p.right.get_bf() == 1: # Right then left rotation
+                        self.right_rotation(p.right.left)
+                        self.left_rotation(p.right)
+                    elif p.right.get_bf() in [-1, 0]: # Single left rotation
+                        self.left_rotation(p.right)
+                p = p.parent
+
+    # Helper method for performing a right rotation
+    def right_rotation(self, piv):
+        if piv.right is not None:
+            piv.parent.left = piv.right
+            piv.right.parent = piv.parent
+        piv.right = piv.parent
+        piv.parent = piv.parent.parent
+        piv.right.parent = piv
+        if piv.parent is not None:
+            if piv.parent.left == piv.right:
+                piv.parent.left = piv
+            piv.parent.right = piv
+        else:
+            self.root = piv
+        piv.right.set_height()
+        piv.set_height()
+
+    # Helper method for performing a left rotation
+    def left_rotation(self, piv):
+        if piv.left is not None:
+            piv.parent.right = piv.left
+            piv.left.parent = piv.parent
+        piv.left = piv.parent
+        piv.parent = piv.parent.parent
+        piv.left.parent = piv
+        if piv.parent is not None:
+            if piv.parent.left == piv.left:
+                piv.parent.left = piv
+            piv.parent.right = piv
+        else:
+            self.root = piv
+        piv.left.set_height()
+        piv.set_height()
 
     """inserts a new node into the dictionary with corresponding key and value (starting at the root)
 
@@ -98,26 +197,25 @@ class AVLTree(object):
     @param key: key of item that is to be inserted to self
     @type val: string
     @param val: the value of the item
-    @rtype: (AVLNode, int, int)
-    @returns: a 3-tuple (x, e, h) where x is the new node,
+    @rtype: (AVLNode,int,int)
+    @returns: a 3-tuple (x,e,h) where x is the new node,
     e is the number of edges on the path between the starting node and new node before rebalancing,
     and h is the number of PROMOTE cases during the AVL rebalancing
     """
     def insert(self, key, val):
-        depth = search(key)[1]
-        promotions = 0
+        depth = self.search(key)[1] - 1
         new_node = AVLNode(key, val)
-        parent = search(key)[0].parent          
-        new_node.parent = parent                 # insertion
-        setHeight(self, new_node)                
-        
-        if key < parent.key:                     
-            parent.left = new_node
-        else:
-            parent.right = new_node
-            
-        rebalancePostInsertion(self, parent)
-
+        parent = self.search_helper(key)[2]
+        new_node.parent = parent
+        new_node.set_height()
+        if parent is not None:
+            if key < parent.key:
+                parent.left = new_node
+            else:
+                parent.right = new_node
+        else: # new_node is the tress's root
+            self.root = new_node
+        promotions = self.rebalance_post_insertion(parent)
         return new_node, depth, promotions
 
     """inserts a new node into the dictionary with corresponding key and value, starting at the max
@@ -127,28 +225,44 @@ class AVLTree(object):
     @param key: key of item that is to be inserted to self
     @type val: string
     @param val: the value of the item
-    @rtype: (AVLNode, int, int)
-    @returns: a 3-tuple (x, e, h) where x is the new node,
+    @rtype: (AVLNode,int,int)
+    @returns: a 3-tuple (x,e,h) where x is the new node,
     e is the number of edges on the path between the starting node and new node before rebalancing,
     and h is the number of PROMOTE cases during the AVL rebalancing
     """
     def finger_insert(self, key, val):
-        depth = finger_search(key)[1]
-        promotions = 0
+        depth = self.search(key)[1] - 1
         new_node = AVLNode(key, val)
-        finger_search(self, key)[0] = new_node          # insertion
-        parent = finger_search(key)[0].parent
+        parent = self.search_helper(key, True)[2]
         new_node.parent = parent
-        setHeight(self, new_node)
-
-        if key < parent.key:                     
-            parent.left = new_node
-        else:
-            parent.right = new_node
-            
-        rebalancePostInsertion(self, parent)
-
+        new_node.set_height()
+        if parent is not None:
+            if key < parent.key:
+                parent.left = new_node
+            else:
+                parent.right = new_node
+        else:  # new_node is the tress's root
+            self.root = new_node
+        promotions = self.rebalance_post_insertion(parent)
         return new_node, depth, promotions
+
+    # Helper method for finding the node's successor
+    def successor(self, temp):
+        temp = self.root
+        prev = None
+        if temp.right is not None:
+            temp = temp.right
+            while temp.left is not None:
+                temp = temp.left
+            prev = temp
+        elif temp.left is not None:
+            temp = temp.left
+            while temp.right is not None:
+                temp = temp.right
+            prev = temp
+        else:
+            return None
+        return prev.key
 
     """deletes node from the dictionary
 
@@ -156,147 +270,107 @@ class AVLTree(object):
     @pre: node is a real pointer to a node in self
     """
     def delete(self, node):
-        deleted_node = search(self, node.key)[0]
-        if deleted_node.height == 0:                                # case 1: it's a leaf
-            if node.key < deleted_node.parent.key:                 
+        # Search for the node to delete
+        deleted_node = self.search(node.key)[0]
+
+        # Case 1: It's a leaf node (no children)
+        if deleted_node.left is None and deleted_node.right is None:
+            if node.key < deleted_node.parent.key:  # If it's a left child
                 deleted_node.parent.left = None
-            else:                                                   # it's a right child
+            else:  # If it's a right child
                 deleted_node.parent.right = None
-                                                                    # case 2: deleted node has one son
-        elif deleted.node.left = None:                              # the deleted node has one child on it's right
-            if node.key < deleted_node.parent.key:                  # deleted node is a left child
+
+        # Case 2: Deleted node has one child on the right
+        elif deleted_node.left is None:
+            if node.key < deleted_node.parent.key:  # If it's a left child
                 deleted_node.parent.left = deleted_node.right
-            else:                                                   # deleted node is a right child
+            else:  # If it's a right child
                 deleted_node.parent.right = deleted_node.right
-            deleted_node.right = deleted_node.parent
-                
-        elif:                                                       # the deleted node has one child on it's left
-            if node.key < deleted_node.parent.key:                  # if it's a left child
+            deleted_node.right.parent = deleted_node.parent  # Update the parent's reference to the right child
+
+        # Case 3: Deleted node has one child on the left
+        elif deleted_node.right is None:
+            if node.key < deleted_node.parent.key:  # If it's a left child
                 deleted_node.parent.left = deleted_node.left
-            else:                                                   # if the deleted node is a right child
+            else:  # If it's a right child
                 deleted_node.parent.right = deleted_node.left
-            deleted_node.left.parent = deleted_node.parent
-        else:                                                       # case 3: deleted node has 2 sons
-            succ = successor(self,deleted_node)
-            succ.parent.left = succ.right
-            succ.right.parent = succ.parent                         # cut successor out of the tree
-            succ.parent = deleted_node.parent                       # put it instead of deleted node
-            if deleted_node.key < deleted_node.parent.key:          
+            deleted_node.left.parent = deleted_node.parent  # Update the parent's reference to the left child
+
+        # Case 4: Deleted node has two children
+        else:
+            succ = self.successor(deleted_node)  # Get the successor of the node to be deleted
+            succ.parent.left = succ.right  # Remove the successor from its current position
+            if succ.right is not None:
+                succ.right.parent = succ.parent  # Update the successor's right child parent
+            succ.parent = deleted_node.parent  # Set the successor's parent to the parent of the deleted node
+            if deleted_node.key < deleted_node.parent.key:  # Update parent's reference to the successor
                 deleted_node.parent.left = succ
             else:
                 deleted_node.parent.right = succ
-                                                          # treat: what is the minimal amount of changes needed for deletion?
-        rebalancePostDeletion(self, succ.parent)
-        
-        return	
+
+        # After structural changes, rebalance the tree if necessary
+        self.rebalance_post_deletion(succ.parent)
 
     """joins self with item and another AVLTree
 
-    @type tree2: AVLTree 
-    @param tree2: a dictionary to be joined with self
-    @type key: int 
-    @param key: the key separating self and tree2
-    @type val: string
-    @param val: the value corresponding to key
-    @pre: all keys in self are smaller than key and all keys in tree2 are larger than key,
-    or the opposite way
-    """
+      @type tree2: AVLTree 
+      @param tree2: a dictionary to be joined with self
+      @type key: int 
+      @param key: the key separating self and tree2
+      @type val: string
+      @param val: the value corresponding to key
+      @pre: all keys in self are smaller than key and all keys in tree2 are larger than key,
+      or the opposite way
+      """
 
-    def successor(self, node):
-        temp = self.root
-        prev = None
-        if (temp.right is not None):
-            temp  = temp.right
-            while (temp.left is not None):
-                temp = temp.left
-            prev = temp
-        elif temp.left is not None:e
-            temp = temp.left
-            while (temp.right is not None):
-                temp = temp.right
-            prev = temp
+    def tree_high_and_max(self):
+        if self.size() == 0:
+            return -1, float('-inf')
         else:
-            return None
-        return prev.key
+            return self.get_root().height, self.max_node().height
 
-    def rebalancePostInsertion(self, p):
-        while p != None:
-            prevHeight = p.height
-            if abs(p.getBF()) < 2 and prevHeight == p.setHeight():  # Terminal case: Height has not changed
-                break
-            elif abs(p.getBF()) < 2 and prevHeight != p.setHeight():  # Promotion case: P's height has changed
-                p = p.parent
-                promotions += 1
-            else:  # Terminal case: Rotation
-                if p.getBF() == 2:
-                    if p.left.getBF() == 1:  # Single Right Rotation
-                        self.rightRotation(p.left)
-                    elif p.left.getBF() == -1:  # Left then right rotation
-                        self.leftRotation(p.left.right)
-                        self.rightRotation(p.left)
-                else:  # p.getBF() == -2
-                    if p.right.getBF() == 1:  # Right then left rotation
-                        self.rightRotation(p.right.left)
-                        self.leftRotation(p.right)
-                    elif p.right.getBF() in [-1, 0]:  # Single left rotation
-                        self.leftRotation(p.right)
-                break
-
-    def rebalancePostDeletion(self, p):
-        while p != None:
-            prevHeight = p.height
-            if abs(p.getBF()) < 2 and prevHeight == p.setHeight():  # Terminal case: Height has not changed
-                break
-            elif abs(p.getBF()) < 2 and prevHeight != p.setHeight():  # Promotion case: P's height has changed
-                p = p.parent
-            else:  # Promotion case: Rotation
-                if p.getBF() == 2:
-                    if p.left.getBF() in [1, 0]:  # Single right rotation
-                        self.rightRotation(p.left)
-                    elif p.left.getBF() == -1:  # Left then right rotation
-                        self.leftRotation(p.left.right)
-                        self.rightRotation(p.left)
-                else:  # p.getBF() == -2
-                    if p.right.getBF() == 1:  # Right then left rotation
-                        self.rightRotation(p.right.left)
-                        self.leftRotation(p.right)
-                    elif p.right.getBF() in [-1, 0]:  # Single left rotation
-                        self.leftRotation(p.right)
-                p = p.parent
-
-    def rightRotation(self, p):
-        p.parent.left = p.right
-        if p.parent.parent.left == p.parent:
-            p.right = p.parent.parent.left
-            p.parent.parent.left = p
+    def join(self, tree2, key, val):
+        join_node = AVLNode(key, val)
+        self_height, self_max = self.tree_high_and_max()[0], self.tree_high_and_max()[1]
+        tree2_height, tree2_max = tree2.tree_high_and_max()[0], tree2.tree_high_and_max()[1]
+        if self_height > tree2_height:
+            higher_tree = self
+            lower_tree = tree2
         else:
-            p.right = p.parent.parent.right
-            p.parent.parent.right = p
-        p.parent = p.parent.parent
-        p.right.parent = p
-        p.right.setHeight()
+            higher_tree = tree2
+            lower_tree = self
+        curr = higher_tree.get_root()
+        if self_max > tree2_max:  # Higher tree is on the right
+            # Search for node with a height less than or equal to lower tree's height
+            while curr.height > lower_tree.get_root().height:
+                curr = curr.left
+            left_root = lower_tree.get_root()
+            # Join both trees
+            join_node.right = curr
+            join_node.parent = curr.parent
+            curr.parent = join_node
+            if join_node.parent is not None:
+                join_node.parent.left = join_node
+            join_node.left = left_root
+            left_root.parent = join_node
+            join_node.set_height()
+            higher_tree.rebalance_post_insertion(join_node.parent)  # Rebalance, if needed
+        else:  # Higher tree is on the left
+            # Search for node with a height less than or equal to lower tree's height
+            while curr.height > lower_tree.get_root().height:
+                curr = curr.right
+            right_root = lower_tree.get_root()
+            # Join both trees
+            join_node.left = curr
+            join_node.parent = curr.parent
+            curr.parent = join_node
+            if join_node.parent is not None:
+                join_node.parent.right = join_node
+            join_node.right = right_root
+            right_root.parent = join_node
+            join_node.set_height()
+            higher_tree.rebalance_post_insertion(join_node.parent)  # Rebalance, if needed
 
-    def leftRotation(self, p):
-        p.parent.right = p.left
-        if p.parent.parent.left == p.parent:
-            p.left = p.parent.parent.left
-            p.parent.parent.left = p
-        else:
-            p.left = p.parent.parent.right
-            p.parent.parent.right = p
-        p.parent = p.parent.parent
-        p.left.parent = p
-        p.left.setHeight()
-
-    def getBF(self, v):
-        return v.right.height - v.left.height
-
-    def setHeight(self, p):
-        # Virtual node's height is -1
-        left_height = p.left.height if p.left else -1  
-        right_height = p.right.height if p.right else -1  
-        p.height = max(p.right.height, p.left.height) + 1   
-        
     """splits the dictionary at a given node
 
     @type node: AVLNode
@@ -308,7 +382,17 @@ class AVLTree(object):
     dictionary larger than node.key.
     """
     def split(self, node):
-        return None, None
+        left_subtree = AVLTree(node.left)
+        right_subtree = AVLTree(node.right)
+        while node is not None:
+            if node.parent.right == node:  # Perform join operation on the left subtree
+                tree_to_join = AVLTree(node.left)
+                left_subtree.join(tree_to_join, node.key, node.value)
+            else:  # Perform join operation on the right subtree
+                tree_to_join = AVLTree(node.right)
+                right_subtree.join(tree_to_join, node.key, node.value)
+            node = node.parent
+        return left_subtree, right_subtree
 
     """returns an array representing dictionary 
 
@@ -316,7 +400,13 @@ class AVLTree(object):
     @returns: a sorted list according to key of tuples (key, value) representing the data structure
     """
     def avl_to_array(self):
-        return None
+        def avl_to_array_rec(node, in_order_arr):
+            if node is not None:
+                avl_to_array_rec(node.left, in_order_arr)
+                in_order_arr.append((node.key, node.value))
+                avl_to_array_rec(node.right, in_order_arr)
+            return in_order_arr
+        return avl_to_array_rec(self.get_root(), [])
 
     """returns the node with the maximal key in the dictionary
 
@@ -325,9 +415,9 @@ class AVLTree(object):
     """
     def max_node(self):
         curr = self.root
-        while curr.right != null:
+        while curr.right is not None:
             curr = curr.right
-        return curr        
+        return curr
 
     """returns the number of items in dictionary 
 
@@ -335,7 +425,7 @@ class AVLTree(object):
     @returns: the number of items in dictionary 
     """
     def size(self):
-        return -1	
+        return len(self.avl_to_array())
 
     """returns the root of the tree representing the dictionary
 
@@ -343,4 +433,59 @@ class AVLTree(object):
     @returns: the root, None if the dictionary is empty
     """
     def get_root(self):
-        return None
+        return self.root
+
+    def __repr__(self):  # you don't need to understand the implementation of this method
+        def printree(root):
+            if not root:
+                return ["#"]
+
+            root_key = str(root.key)
+            left, right = printree(root.left), printree(root.right)
+
+            lwid = len(left[-1])
+            rwid = len(right[-1])
+            rootwid = len(root_key)
+
+            result = [(lwid + 1) * " " + root_key + (rwid + 1) * " "]
+
+            ls = len(left[0].rstrip())
+            rs = len(right[0]) - len(right[0].lstrip())
+            result.append(ls * " " + (lwid - ls) * "_" + "/" + rootwid * " " + "\\" + rs * "_" + (rwid - rs) * " ")
+
+            for i in range(max(len(left), len(right))):
+                row = ""
+                if i < len(left):
+                    row += left[i]
+                else:
+                    row += lwid * " "
+
+                row += (rootwid + 2) * " "
+
+                if i < len(right):
+                    row += right[i]
+                else:
+                    row += rwid * " "
+
+                result.append(row)
+
+            return result
+
+        return '\n'.join(printree(self.root))
+
+
+if __name__ == "__main__":
+    tree = AVLTree()
+
+    # הכנסה של צמתים לעץ
+    tree.insert(10, 'A')
+    tree.insert(20, 'B')
+    tree.insert(5, 'C')
+    tree.insert(15, 'D')
+    tree.insert(21, 'E')
+    tree.insert(40, 'F')
+
+    # בסוף כל ההכנסות, נדפיס את מבנה העץ לאחר האיזונים
+    print("\nFinal tree structure:")
+    print(tree)
+
