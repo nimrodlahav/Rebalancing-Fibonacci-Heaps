@@ -37,10 +37,12 @@ class AVLNode(object):
         if self.is_real_node():
             self.height = max(self.left.height, self.right.height) + 1
 
-    # Helper method for calculating node's Balance Factor
+    # Node's BF calculator
     def get_bf(self):
         if self.is_real_node():
             return self.left.height - self.right.height
+        else: # Virtual node's BF
+            return 0
 
 
 """
@@ -51,35 +53,38 @@ class AVLTree(object):
     """
     Constructor, you are allowed to add more fields.
     """
+    # Default Initialization with a virtual node as root
     def __init__(self, root=AVLNode()):
         self.root = root
 
     # Helper method that returns the triplet (key, path, parent)
     def inner_search(self, key, finger=False):
         parent = None
+        path = 0  # Path initialization
         if not finger:
-            path = 1  # Initialize path
             curr = self.get_root()
         else:  # Finger search
-            path = 0  # Initialize path
             curr = self.max_node()
-            while curr is not self.get_root() and curr.parent.key > key:
-                curr = curr.parent
-                path += 1
+            if curr.is_real_node():
+                # Ascend to the first node with a smaller key (or the root)
+                while curr is not self.get_root() and curr.parent.key > key:
+                    curr = curr.parent
+                    path += 1
+        # Descend through the tree as usual, for both cases
         while curr.is_real_node():
             if curr.key != key:
                 parent = curr
                 if curr.key > key:
                     curr = curr.left
-                elif curr.key < key:
+                else: # curr.key < key
                     curr = curr.right
                 path += 1
-            else:
+            else: # curr.key == key
                 break
         if curr.is_real_node():
-            return curr, path, parent
-        else:  # AVL tree does not contain a node with the key k
-            return None, -1, parent
+            return curr, path + 1, parent
+        else: # AVL tree does not contain a node with the key k
+            return None, path, parent
 
     """searches for a node in the dictionary corresponding to the key (starting at the root)
 
@@ -113,23 +118,23 @@ class AVLTree(object):
         while p is not None:
             prev_height = p.height
             p.set_height()
-            if abs(p.get_bf()) < 2 and prev_height == p.height:  # Terminal case: Height has not changed
+            if abs(p.get_bf()) < 2 and prev_height == p.height: # Terminal case: Height has not changed
                 break
-            elif abs(p.get_bf()) < 2 and prev_height != p.height:  # Promotion case: P's height has changed
+            elif abs(p.get_bf()) < 2 and prev_height != p.height: # Promotion case: P's height has changed
                 p = p.parent
                 promotions += 1
-            else:  # Terminal case: Rotation (|BF(p)|=2)
+            else: # Terminal case: Rotation (|BF(p)|=2)
                 if p.get_bf() == 2:
-                    if p.left.get_bf() == 1:  # Single Right Rotation
+                    if p.left.get_bf() == 1: # Single Right Rotation
                         self.right_rotation(p.left)
-                    elif p.left.get_bf() == -1:  # Left then right rotation
+                    elif p.left.get_bf() == -1: # Left then right rotation
                         self.left_rotation(p.left.right)
                         self.right_rotation(p.left)
                 elif p.get_bf() == -2:
-                    if p.right.get_bf() == 1:  # Right then left rotation
+                    if p.right.get_bf() == 1: # Right then left rotation
                         self.right_rotation(p.right.left)
                         self.left_rotation(p.right)
-                    elif p.right.get_bf() == -1:  # Single left rotation
+                    elif p.right.get_bf() == -1: # Single left rotation
                         self.left_rotation(p.right)
                 break
         return promotions
@@ -139,61 +144,57 @@ class AVLTree(object):
         while p is not None:
             prev_height = p.height
             p.set_height()
-            if abs(p.get_bf()) < 2 and prev_height == p.height:  # Terminal case: Height has not changed
+            if abs(p.get_bf()) < 2 and prev_height == p.height: # Terminal case: Height has not changed
                 break
-            elif abs(p.get_bf()) < 2 and prev_height != p.height:  # Promotion case: P's height has changed
+            elif abs(p.get_bf()) < 2 and prev_height != p.height: # Promotion case: P's height has changed
                 p = p.parent
-            else:  # Terminal\Promotion case: Rotation (|BF(p)|=2)
+            else: # Terminal\Promotion case: Rotation (|BF(p)|=2)
                 if p.get_bf() == 2:
-                    if p.left.get_bf() in [1, 0]:  # Single Right Rotation
+                    if p.left.get_bf() in [1, 0]: # Single Right Rotation
                         self.right_rotation(p.left)
-                    elif p.left.get_bf() == -1:  # Left then right rotation
+                    elif p.left.get_bf() == -1: # Left then right rotation
                         self.left_rotation(p.left.right)
                         self.right_rotation(p.left)
                 else:
-                    if p.right.get_bf() == 1:  # Right then left rotation
+                    if p.right.get_bf() == 1: # Right then left rotation
                         self.right_rotation(p.right.left)
                         self.left_rotation(p.right)
-                    elif p.right.get_bf() in [-1, 0]:  # Single left rotation
+                    elif p.right.get_bf() in [-1, 0]: # Single left rotation
                         self.left_rotation(p.right)
                 p = p.parent
 
     # Helper method for performing a right rotation
     def right_rotation(self, piv):
-        piv.parent.right = piv.right
+        piv.parent.left = piv.right
         piv.right.parent = piv.parent
-        left_virtual_node = AVLNode()
-        piv.parent.left = left_virtual_node
-        left_virtual_node.parent = piv.parent
         piv.right = piv.parent
         piv.parent = piv.parent.parent
         piv.right.parent = piv
         if piv.parent is not None:
             if piv.parent.left == piv.right:
                 piv.parent.left = piv
-            piv.parent.right = piv
-        else:
-            self.root = piv  # Self has a new root
+            else: # piv.parent.right == piv.right
+                piv.parent.right = piv
+        else: # Self has a new root
+            self.root = piv
         # Height updates
         piv.right.set_height()
         piv.set_height()
 
     # Helper method for performing a left rotation
     def left_rotation(self, piv):
-        piv.parent.left = piv.left
+        piv.parent.right = piv.left
         piv.left.parent = piv.parent
-        right_virtual_node = AVLNode()
-        piv.parent.right = right_virtual_node
-        right_virtual_node.parent = piv.parent
         piv.left = piv.parent
         piv.parent = piv.parent.parent
         piv.left.parent = piv
         if piv.parent is not None:
             if piv.parent.left == piv.left:
                 piv.parent.left = piv
-            piv.parent.right = piv
-        else:
-            self.root = piv  # Self has a new root
+            else: # piv.parent.right == piv.right
+                piv.parent.right = piv
+        else: # Self has a new root
+            self.root = piv
         # Height updates
         piv.left.set_height()
         piv.set_height()
@@ -202,28 +203,28 @@ class AVLTree(object):
     def inner_insert(self, key, val, finger=False):
         new_node = AVLNode(key, val)
         parent = self.inner_search(key)[2]
-        new_node.parent = parent
-        # connecting virtual nodes to new node
+        new_node.parent = parent # Set the node's parent
+        # Connecting virtual nodes to new node
         new_node.left = AVLNode()
         new_node.right = AVLNode()
         new_node.left.parent = new_node
         new_node.right.parent = new_node
         new_node.set_height()
-        if parent is not None: # set the node's parent
+        if parent is not None: # Set node's parent child
             if key < parent.key:
                 parent.left = new_node
             else:
                 parent.right = new_node
-            # node's depth calculating
-            if finger:
-                depth = self.finger_search(parent.key)[1]
-            else:
-                depth = self.search(parent.key)[0]
-        else: # new_node is the tress's root
+        else: # New_node is the tree's root
             self.root = new_node
-        depth = 0
-        promotions = self.rebalance_post_insertion(parent) # promotions counting and rebalancing, if necessary
-        return new_node, depth, promotions
+        # Node's insert path calculating
+        if not finger:
+            path = self.search(key)[1]
+        else:
+            path = self.finger_search(key)[1]
+        # promotions counting and rebalancing, if necessary
+        promotions = self.rebalance_post_insertion(parent)
+        return new_node, path, promotions
 
     """inserts a new node into the dictionary with corresponding key and value (starting at the root)
 
@@ -258,8 +259,9 @@ class AVLTree(object):
     # Helper method for finding tree's minimum node
     def min_node(self):
         curr = self.root
-        while curr.is_real_node():
-            curr = curr.left
+        if self.root.is_real_node():
+            while curr.left.is_real_node():
+                curr = curr.left
         return curr
 
     # Helper method for finding node's successor
@@ -293,39 +295,39 @@ class AVLTree(object):
         # Case 2: Deleted node has one child on the right
         elif not node.left.is_real_node():
             if node.parent is not None:
-                if node.key < node.parent.key:  # If it's a left child
+                if node.key < node.parent.key: # If it's a left child
                     node.parent.left = node.right
-                else:  # If it's a right child
+                else: # If it's a right child
                     node.parent.right = node.right
             else: # If tree's root is the deleted node, set it to node's left child
                 self.root = node.right
-            node.right.parent = node.parent  # Update the parent's reference to the right child
+            node.right.parent = node.parent # Update the parent's reference to the right child
 
         # Case 3: Deleted node has one child on the left
         elif not node.right.is_real_node():
             if node.parent is not None:
-                if node.key < node.parent.key:  # If it's a left child
+                if node.key < node.parent.key: # If it's a left child
                     node.parent.left = node.left
-                else:  # If it's a right child
+                else: # If it's a right child
                     node.parent.right = node.left
-            else:  # If tree's root is the deleted node, set it to node's right child
+            else: # If tree's root is the deleted node, set it to node's right child
                 self.root = node.left
-            node.left.parent = node.parent  # Update the parent's reference to the left child
+            node.left.parent = node.parent # Update the parent's reference to the left child
 
         # Case 4: Deleted node has two children
         else:
-            succ = self.successor(node)  # Get the successor of the node to be deleted
-            if succ.key < succ.parent.key:  # Remove the successor from its current position
+            succ = self.successor(node) # Get the successor of the node to be deleted
+            if succ.key < succ.parent.key: # Remove the successor from its current position
                 succ.parent.left = succ.right
             else:
                 succ.parent.right = succ.right
             succ.right.parent = succ.parent # Update the successor's right child parent
             succ.left.parent = None # disconnecting successor's left virtual node
-            succ.parent = node.parent  # Set the successor's parent to the parent of the deleted node
-            if node.parent is not None:  # Update parent's reference to the successor
-                if node.key < node.parent.key:
+            succ.parent = node.parent # Set the successor's parent to the parent of the deleted node
+            if node.parent is not None: # Update parent's reference to the successor
+                if node.key < node.parent.key: # If it's a left child
                     node.parent.left = succ
-                else:
+                else: # If it's a right child
                     node.parent.right = succ
             else:
                 self.root = succ
@@ -364,17 +366,17 @@ class AVLTree(object):
         join_node = AVLNode(key, val)
         self_height = self.tree_height_and_max()[0]
         tree2_height = tree2.tree_height_and_max()[0]
-        if self_height > tree2_height:
+        if self_height > tree2_height: # Self is higher
             higher_tree = self
             lower_tree = tree2
-        else:
+        else: # Tree2 is higher/both heights are equal
             higher_tree = tree2
             lower_tree = self
         higher_tree_max = higher_tree.tree_height_and_max()[1]
         lower_tree_max = lower_tree.tree_height_and_max()[1]
         curr = higher_tree.get_root()
 
-        if higher_tree_max > lower_tree_max:  # Higher tree is on the right
+        if higher_tree_max > lower_tree_max: # Higher tree is on the right
             # Search for node with a height less than or equal to lower tree's height
             while curr.height > max(lower_tree.tree_height_and_max()[0], 0):
                 curr = curr.left
@@ -388,8 +390,8 @@ class AVLTree(object):
             join_node.left = left_root
             left_root.parent = join_node
             join_node.set_height()
-            higher_tree.rebalance_post_insertion(join_node.parent)  # Rebalance, if needed
-        elif higher_tree_max < lower_tree_max:  # Higher tree is on the left
+            higher_tree.rebalance_post_insertion(join_node.parent) # Rebalance, if necessary
+        elif higher_tree_max < lower_tree_max: # Higher tree is on the left
             while curr.height > max(lower_tree.tree_height_and_max()[0], 0):
                 curr = curr.right
             right_root = lower_tree.get_root()
@@ -402,7 +404,7 @@ class AVLTree(object):
             join_node.right = right_root
             right_root.parent = join_node
             join_node.set_height()
-            higher_tree.rebalance_post_insertion(join_node.parent)  # Rebalance, if necessary
+            higher_tree.rebalance_post_insertion(join_node.parent) # Rebalance, if necessary
 
         # If new root does not belong to self, set self's root
         if self_height == -1 or tree2_height == -1 or self_height == tree2_height:
@@ -424,10 +426,10 @@ class AVLTree(object):
         left_subtree = AVLTree(node.left)
         right_subtree = AVLTree(node.right)
         while node.parent is not None:
-            if node.parent.right == node:  # Perform join operation on the left subtree
+            if node.parent.right == node: # Perform join operation on the left subtree
                 tree_to_join = AVLTree(node.parent.left)
                 left_subtree.join(tree_to_join, node.parent.key, node.parent.value)
-            else:  # Perform join operation on the right subtree
+            else: # Perform join operation on the right subtree
                 tree_to_join = AVLTree(node.parent.right)
                 right_subtree.join(tree_to_join, node.parent.key, node.parent.value)
             node = node.parent
@@ -445,7 +447,6 @@ class AVLTree(object):
                 in_order_arr.append((node.key, node.value))
                 avl_to_array_rec(node.right, in_order_arr)
             return in_order_arr
-
         return avl_to_array_rec(self.get_root(), [])
 
     """returns the node with the maximal key in the dictionary
@@ -455,8 +456,9 @@ class AVLTree(object):
     """
     def max_node(self):
         curr = self.root
-        while curr.right.is_real_node():
-            curr = curr.right
+        if self.root.is_real_node():
+            while curr.right.is_real_node():
+                curr = curr.right
         return curr
 
     """returns the number of items in dictionary 
