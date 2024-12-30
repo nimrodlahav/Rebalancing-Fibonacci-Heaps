@@ -70,6 +70,8 @@ class AVLTree(object):
                 while curr is not self.get_root() and curr.parent.key > key:
                     curr = curr.parent
                     path += 1
+                    if curr.key < key: # Prevent double edge counting
+                        path -= 1
         # Descend through the tree as usual, for both cases
         while curr.is_real_node():
             if curr.key != key:
@@ -113,7 +115,7 @@ class AVLTree(object):
         return desired_node, path
 
     # Helper method for rebalancing an AVL tree after insertion
-    def rebalance_post_insertion(self, p):
+    def rebalance_post_insertion(self, p, join=False):
         promotions = 0
         while p is not None:
             prev_height = p.height
@@ -125,7 +127,7 @@ class AVLTree(object):
                 promotions += 1
             else: # Terminal case: Rotation (|BF(p)|=2)
                 if p.get_bf() == 2:
-                    if p.left.get_bf() == 1: # Single Right Rotation
+                    if p.left.get_bf() == 1 or (join and p.left.get_bf() == 0): # Single Right Rotation
                         self.right_rotation(p.left)
                     elif p.left.get_bf() == -1: # Left then right rotation
                         self.left_rotation(p.left.right)
@@ -155,7 +157,7 @@ class AVLTree(object):
                     elif p.left.get_bf() == -1: # Left then right rotation
                         self.left_rotation(p.left.right)
                         self.right_rotation(p.left)
-                else:
+                elif p.get_bf() == -2:
                     if p.right.get_bf() == 1: # Right then left rotation
                         self.right_rotation(p.right.left)
                         self.left_rotation(p.right)
@@ -291,6 +293,7 @@ class AVLTree(object):
                     node.parent.right = AVLNode()
             else: # If the tree includes only the deleted node, set its root to virtual node
                 self.root = AVLNode()
+            p = node.parent
 
         # Case 2: Deleted node has one child on the right
         elif not node.left.is_real_node():
@@ -302,6 +305,7 @@ class AVLTree(object):
             else: # If tree's root is the deleted node, set it to node's left child
                 self.root = node.right
             node.right.parent = node.parent # Update the parent's reference to the right child
+            p = node.parent
 
         # Case 3: Deleted node has one child on the left
         elif not node.right.is_real_node():
@@ -313,6 +317,7 @@ class AVLTree(object):
             else: # If tree's root is the deleted node, set it to node's right child
                 self.root = node.left
             node.left.parent = node.parent # Update the parent's reference to the left child
+            p = node.parent
 
         # Case 4: Deleted node has two children
         else:
@@ -323,7 +328,6 @@ class AVLTree(object):
                 succ.parent.right = succ.right
             succ.right.parent = succ.parent # Update the successor's right child parent
             succ.left.parent = None # disconnecting successor's left virtual node
-            succ.parent = node.parent # Set the successor's parent to the parent of the deleted node
             if node.parent is not None: # Update parent's reference to the successor
                 if node.key < node.parent.key: # If it's a left child
                     node.parent.left = succ
@@ -332,17 +336,20 @@ class AVLTree(object):
             else:
                 self.root = succ
             # Connecting successor to node's children
-            succ.right = node.right
             succ.left = node.left
-            succ.right.parent = succ
+            succ.right = node.right
             succ.left.parent = succ
+            succ.right.parent = succ
+            p = succ
+            succ.parent = node.parent # Set the successor's parent to the parent of the deleted node
 
-        # Before completely disconnecting the deleted node from the tree, save its parent
-        parent = node.parent
+        # disconnecting the deleted node from the tree
+        node.right = None
+        node.left = None
         node.parent = None
 
         # After structural changes, rebalance the tree if necessary
-        self.rebalance_post_deletion(parent)
+        self.rebalance_post_deletion(p)
 
     # Helper method that returns tree's height and maximum key
     def tree_height_and_max(self):
@@ -404,7 +411,7 @@ class AVLTree(object):
             join_node.right = right_root
             right_root.parent = join_node
             join_node.set_height()
-            higher_tree.rebalance_post_insertion(join_node.parent) # Rebalance, if necessary
+            higher_tree.rebalance_post_insertion(join_node.parent, True) # Rebalance, if necessary
 
         # If new root does not belong to self, set self's root
         if self_height == -1 or tree2_height == -1 or self_height == tree2_height:
@@ -426,7 +433,7 @@ class AVLTree(object):
         left_subtree = AVLTree(node.left)
         right_subtree = AVLTree(node.right)
         while node.parent is not None:
-            if node.parent.right == node: # Perform join operation on the left subtree
+            if node.parent.right == node:  # Perform join operation on the left subtree
                 tree_to_join = AVLTree(node.parent.left)
                 left_subtree.join(tree_to_join, node.parent.key, node.parent.value)
             else: # Perform join operation on the right subtree
@@ -476,4 +483,42 @@ class AVLTree(object):
     """
     def get_root(self):
         return self.root
+    
+    # Delete before submission!
+    def __repr__(self):
+        def printree(root):
+            if not root:
+                return ["#"]
 
+            root_key = str(root.key)
+            left, right = printree(root.left), printree(root.right)
+
+            lwid = len(left[-1])
+            rwid = len(right[-1])
+            rootwid = len(root_key)
+
+            result = [(lwid + 1) * " " + root_key + (rwid + 1) * " "]
+
+            ls = len(left[0].rstrip())
+            rs = len(right[0]) - len(right[0].lstrip())
+            result.append(ls * " " + (lwid - ls) * "_" + "/" + rootwid * " " + "\\" + rs * "_" + (rwid - rs) * " ")
+
+            for i in range(max(len(left), len(right))):
+                row = ""
+                if i < len(left):
+                    row += left[i]
+                else:
+                    row += lwid * " "
+
+                row += (rootwid + 2) * " "
+
+                if i < len(right):
+                    row += right[i]
+                else:
+                    row += rwid * " "
+
+                result.append(row)
+
+            return result
+
+        return '\n'.join(printree(self.root))
