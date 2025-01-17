@@ -90,6 +90,7 @@ public class FibonacciHeap {
 					break;
 				} else {
 					HeapNode root = link(currCons, consArr[currRank]);
+					this.links += 1;
 					consArr[currRank] = null;
 					consArr[currRank + 1] = root;
 				}
@@ -144,6 +145,7 @@ public class FibonacciHeap {
 	// Complexity: O(1)
 	public void cascadingCut(HeapNode x, HeapNode y) {
 		cut(x, y);
+		this.cuts += 1;
 		if (y.parent != null) {
 			if (!y.mark)
 				y.mark = true;
@@ -181,14 +183,14 @@ public class FibonacciHeap {
 	 * Return the total number of links.
 	 */
 	public int totalLinks() {
-		return 0;
+		return links;
 	}
 
 	/**
 	 * Return the total number of cuts.
 	 */
 	public int totalCuts() {
-		return 0;
+		return cuts;
 	}
 
 	/**
