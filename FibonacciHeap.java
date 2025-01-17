@@ -4,27 +4,12 @@
  * An implementation of Fibonacci heap over positive integers.
  */
 public class FibonacciHeap {
-	public HeapNode minimum;
-	public int size;
-	public int numberOfTrees = 0;
-	public int cuts = 0;			// new field for totalCuts
-	public int links = 0;			// " " " totalLinks
 
 	/**
 	 * Constructor to initialize an empty heap.
 	 */
 	public FibonacciHeap() {
-		minimum = null;
-		size = 0;
-		numberOfTrees = 0;
 	}
-
-	public FibonacciHeap(int key, String info) {			// constructor of on-node heap
-		minimum = new HeapNode(key, info);
-		size = 1;
-		numberOfTrees = 1;
-	}
-
 
 	/**
 	 * pre: key > 0
@@ -32,14 +17,7 @@ public class FibonacciHeap {
 	 */
 	// Complexity: O(1)
 	public HeapNode insert(int key, String info) {
-		HeapNode newRoot = new HeapNode();
-		newRoot.key = key;
-		newRoot.info = info;
-		FibonacciHeap heap2 = new FibonacciHeap();			// why create a new one (and not use "this")?
-		heap2.minimum = newRoot;
-		heap2.size = heap2.numberOfTrees = 1;
 		meld(heap2);
-		return newRoot;
 	}
 
 	/**
@@ -47,11 +25,9 @@ public class FibonacciHeap {
 	 */
 	// Complexity: O(1)
 	public HeapNode findMin() {
-		return minimum;
 	}
 
 	// Complexity: O(1)
-	public HeapNode link(HeapNode x, HeapNode y) {				// where should i put a link counter?
 		if (x.key > y.key) {
 			HeapNode tmp = x;
 			x = y;
@@ -71,15 +47,9 @@ public class FibonacciHeap {
 	 */
 	// Complexity: W.C O(n), Amortize O(logn)
 	public void deleteMin() {
-		HeapNode currCons = minimum.child;			// what's the meaning of the variable name?
 		currCons.parent = null;
-		currCons.next = minimum.next;
-		minimum.prev.next = minimum.next.prev = currCons;
-		minimum.prev = minimum.next = null;
-		int maxTrees = (int) Math.log(size + 1);
 		HeapNode[] consArr = new HeapNode[maxTrees];
 		HeapNode nextCons = null;
-		while (nextCons != minimum.child) {
 			currCons.prev = null;
 			nextCons = currCons.next;
 			currCons.next = null;
@@ -122,13 +92,9 @@ public class FibonacciHeap {
 				contiguousArr[i].next = contiguousArr[0];
 			}
 		}
-		minimum = newMin;
-		size--;
-		numberOfTrees = rankCnt;
 	}
 
 	// Complexity: O(1)
-	public void cut(HeapNode x, HeapNode y) {			// where do i keep the cut counter?
 		x.parent = null;
 		x.mark = false;
 		y.rank--;
@@ -163,7 +129,6 @@ public class FibonacciHeap {
 			HeapNode y = x.parent;
 			cascadingCut(x, y);
 			FibonacciHeap newHeap = new FibonacciHeap();
-			newHeap.minimum = x;
 			meld(newHeap);
 		}
 	}
@@ -172,8 +137,6 @@ public class FibonacciHeap {
 	 * Delete the x from the heap.
 	 */
 	public void delete(HeapNode x) {
-		this.decreaseKey(x, (x.key)-(x.minimum+1));		// now x is the minimum
-		this.deleteMin();
 		return;
 	}
 
@@ -203,7 +166,6 @@ public class FibonacciHeap {
 	 */
 	// Complexity: O(1)
 	public int size() {
-		return size;
 	}
 
 	/**
@@ -211,7 +173,6 @@ public class FibonacciHeap {
 	 */
 	// Complexity: O(1)
 	public int numTrees() {
-		return numberOfTrees;
 	}
 
 	/**
